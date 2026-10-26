@@ -5,6 +5,7 @@ import { useEffect, useRef } from 'react';
 import Markdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { messageText } from '@/lib/chat';
+import { CopyReply } from './copy-reply';
 
 export function MessageList({ messages, busy }: { messages: UIMessage[]; busy: boolean }) {
   const scrollArea = useRef<HTMLDivElement>(null);
@@ -42,6 +43,7 @@ export function MessageList({ messages, busy }: { messages: UIMessage[]; busy: b
                     img: ({ alt }) => <span className="image-placeholder">[图片：{alt || '模型返回的图片'}]</span>,
                   }}>{text}</Markdown></div>
                 )}
+                {message.role === 'assistant' ? <CopyReply text={text} disabled={busy && message.id === lastMessage?.id} /> : null}
               </div>
             </article>
           );

@@ -1,11 +1,13 @@
 'use client';
 
-import { ArrowUpRight, BookOpen, Code2, Feather, MessageCircle, Plus, RotateCcw, Sprout } from 'lucide-react';
-import { useState } from 'react';
+import { ArrowUpRight, BookOpen, Code2, Download, Feather, Menu, Plus, RotateCcw, Sprout, Trash2, X } from 'lucide-react';
+import { useRef, useState } from 'react';
 import { useConversation } from '@/hooks/use-conversation';
-import { messageText, MODEL_LABEL } from '@/lib/chat';
+import { MODEL_LABEL } from '@/lib/chat';
 import { ChatComposer } from './chat-composer';
 import { MessageList } from './message-list';
+import { ConversationList } from './conversation-list';
+import { RenameConversation } from './rename-conversation';
 
 const suggestions = [
   { icon: BookOpen, title: '把复杂的事说简单', description: '一个概念，一起慢慢拆解', prompt: '请用通俗的语言和一个生活中的例子，解释什么是大语言模型。' },
@@ -14,10 +16,22 @@ const suggestions = [
 ];
 
 export function ChatWorkspace() {
-  const { messages, sendMessage, status, error, clearError, regenerate, stop, busy, hydrated, storageError, clearConversation } = useConversation();
+  const { messages, sendMessage, status, error, clearError, regenerate, stop, busy, hydrated, storageError,
+    active, conversations, newConversation, selectConversation, renameConversation, deleteConversation, exportConversation } = useConversation();
   const [input, setInput] = useState('');
-  const firstMessage = messages.find(message => message.role === 'user');
-  const title = firstMessage ? messageText(firstMessage) : '还没有开始的好想法';
+  const mobileHistory = useRef<HTMLDialogElement>(null);
+
+  function changeConversation(id?: string) {
+    if (busy || !hydrated) return;
+    if (id === active?.id) {
+      mobileHistory.current?.close();
+      return;
+    }
+    setInput('');
+    if (id) selectConversation(id);
+    else newConversation();
+    mobileHistory.current?.close();
+  }
 
   function send(text: string) {
     if (!text.trim() || busy || !hydrated) return;
@@ -30,23 +44,39 @@ export function ChatWorkspace() {
     <div className="workspace">
       <aside className="sidebar" aria-label="对话信息">
         <a href="/" className="brand" aria-label="回声首页"><span className="brand-mark" aria-hidden="true">回</span><span>回声<small>ECHO / A SPACE TO THINK</small></span></a>
-        <button className="new-chat" onClick={clearConversation} disabled={busy || !hydrated}><Plus size={17} />开启新对话<span>↗</span></button>
-        <div className="sidebar-section-label">当前对话 <span>01</span></div>
-        <div className={`current-conversation ${messages.length ? 'has-messages' : ''}`}><MessageCircle size={16} /><span title={title}>{title}</span></div>
+        <button className="new-chat" onClick={() => changeConversation()} disabled={busy || !hydrated}><Plus size={17} />开启新对话<span>↗</span></button>
+        <ConversationList conversations={conversations} activeId={active?.id} disabled={busy || !hydrated} onSelect={changeConversation} />
         <div className="sidebar-bottom">
           <div className="sidebar-quote"><Sprout size={23} strokeWidth={1.3} /><p>给想法一点空间，<br />让可能慢慢发生。</p></div>
           <div className="storage-note"><span className="tiny-dot" />对话仅保存在此浏览器</div>
         </div>
       </aside>
 
+      <dialog className="history-dialog" ref={mobileHistory} aria-labelledby="history-title">
+        <div className="history-dialog-header"><h2 id="history-title">我的对话</h2><button className="icon-button" onClick={() => mobileHistory.current?.close()} aria-label="关闭会话列表"><X size={20} /></button></div>
+        <button className="new-chat" onClick={() => changeConversation()} disabled={busy || !hydrated}><Plus size={17} />开启新对话</button>
+        <ConversationList conversations={conversations} activeId={active?.id} disabled={busy || !hydrated} onSelect={changeConversation} />
+        <p className="history-dialog-note">对话仅保存在当前浏览器，可导出为 Markdown。</p>
+      </dialog>
+
       <main className="main-panel">
         <header className="topbar">
+          <button className="mobile-history icon-button" onClick={() => mobileHistory.current?.showModal()} aria-label="打开会话列表"><Menu size={19} /></button>
           <div className="page-label"><span className="mobile-brand">回声<span>/</span></span>你的思考空间</div>
           <div className="model-indicator"><span className={`status-dot ${busy ? 'pulsing' : ''}`} /><span>{MODEL_LABEL}</span></div>
-          <button className="mobile-new-chat" onClick={clearConversation} disabled={busy || !hydrated} aria-label="开启新对话"><Plus size={19} /></button>
+          <button className="mobile-new-chat" onClick={() => changeConversation()} disabled={busy || !hydrated} aria-label="开启新对话"><Plus size={19} /></button>
         </header>
 
-        {messages.length ? <MessageList messages={messages} busy={busy} /> : (
+        <div className="conversation-toolbar">
+          <div className="conversation-heading"><span>当前对话</span><h2 title={active?.title}>{active?.title ?? '正在读取记录…'}</h2></div>
+          <div className="conversation-actions" aria-label="当前会话操作">
+            <RenameConversation key={active?.id} title={active?.title ?? ''} disabled={busy || !hydrated} onRename={renameConversation} />
+            <button className="icon-button" onClick={exportConversation} disabled={busy || !hydrated || !messages.length} aria-label="导出当前会话" title="导出 Markdown"><Download size={16} /></button>
+            <button className="icon-button delete-conversation" onClick={() => { if (deleteConversation()) setInput(''); }} disabled={busy || !hydrated} aria-label="删除当前会话" title="删除会话"><Trash2 size={15} /></button>
+          </div>
+        </div>
+
+        {messages.length ? <MessageList key={active?.id} messages={messages} busy={busy} /> : (
           <section className="welcome" aria-labelledby="welcome-title">
             <div className="welcome-inner">
               <div className="welcome-eyebrow"><span />A LITTLE SPACE. A NEW POSSIBILITY.</div>
@@ -65,7 +95,7 @@ export function ChatWorkspace() {
 
         <div className="composer-area">
           {error ? <div className="error-notice" role="alert" aria-label="发送失败"><p>{error.message === 'Failed to fetch' ? '网络连接中断，请检查网络后重试。' : error.message}</p><button type="button" onClick={() => { clearError(); void regenerate(); }} disabled={busy}><RotateCcw size={14} />重新尝试</button></div> : null}
-          {storageError ? <p className="storage-warning" role="status">浏览器记录无法读取或保存；仍可继续聊天，刷新前请自行保留需要的内容。</p> : null}
+          {storageError ? <p className="storage-warning" role="status">{storageError}</p> : null}
           {busy ? <div className="generation-status" role="status">{status === 'submitted' ? '正在等待回复…' : '回声正在回复…'}</div> : null}
           <ChatComposer input={input} onChange={setInput} onSend={() => send(input)} onStop={() => { void stop(); }} busy={busy} disabled={!hydrated} />
           <footer className="composer-footer"><span>由 AI 生成的内容可能不准确，请核实重要信息。</span><span className="footer-signature">THINK IN GOOD COMPANY.</span></footer>

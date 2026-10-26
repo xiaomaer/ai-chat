@@ -1,45 +1,62 @@
-# Echo · Next.js Chat Demo
+# Echo · Personal Next.js Chat Assistant
 
-A chat interface built with Next.js App Router, React, and the Vercel AI SDK, using the existing Gemini 3.1 Flash-Lite configuration.
+Built with the Next.js App Router, React, and the Vercel AI SDK, using Gemini 3.1 Flash-Lite. This personal edition stores multiple conversations in the current browser and requires no database or login.
 
-## Run locally
+## Local development
 
-Requires Node.js 22 or later.
+Node.js 22 or later is required.
 
 ```bash
 npm install
 ```
 
-Configure the API key in the project root `.env` file. Existing configuration can be reused:
+Set your API key in `.env` at the project root. Existing configuration can be reused:
 
 ```dotenv
-GOOGLE_GENERATIVE_AI_API_KEY=your_api_key
+GOOGLE_GENERATIVE_AI_API_KEY=your-api-key
 ```
 
 ```bash
 npm run dev
 ```
 
-Open http://localhost:3000. The key is read on the server and is never sent to the browser. The original `index.ts` is preserved; run the command-line example with `npm run demo`.
+Open http://localhost:3000. The API key is read on the server and is never sent to the browser. The original `index.ts` is retained; run `npm run demo` to use the command-line example.
 
-## Features
+## Personal conversation management
 
-- Send messages with multi-turn context and real-time streaming responses.
-- Enter to send, Shift + Enter for a new line, and Chinese IME support.
-- Stop generation, retry failed requests, and render Markdown and code blocks.
-- Store the conversation in the current browser's localStorage and restore it after refresh. Clearing the conversation also updates the saved history.
-- Save history when generation finishes or stops. Closing the page during generation may discard the incomplete response.
-- Responsive layout and support for reduced-motion preferences.
+- The sidebar lists conversations by their most recent message update. On mobile, open the list using the menu button in the header.
+- Creating a conversation preserves existing conversations. Repeatedly clicking New reuses an empty conversation that has no messages yet.
+- Each conversation has its own ID, title, creation time, update time, and message history. Requests include only the active conversation's context.
+- The first question becomes the conversation title automatically. Use the pencil button in the header to open an in-page rename dialog, with a maximum title length of 60 characters. It supports saving, canceling, empty-title validation, and closing with Escape, including in embedded browsers that do not support native browser input prompts.
+- Export the current conversation as Markdown from the header, including user messages, model replies, and code blocks. Exports are intended for reading and backups; importing them to restore conversations is not currently supported.
+- Delete removes only the active conversation after confirmation. Deleting the last conversation creates an empty one.
+- Refreshing restores the conversation list and the last selected conversation. Creating, switching, renaming, deleting, and exporting conversations are disabled during generation and become available again when generation stops or finishes.
+- Legacy single-conversation history is migrated automatically. The legacy storage key is removed only after the new format has been saved successfully, preserving history if migration fails.
 
-Each request sends the current conversation to Gemini as context. Local storage does not mean offline inference and does not synchronize across devices. The page shows a warning if browser storage is unavailable or full.
+## Chat features
+
+- Multi-turn context, streamed replies, Markdown rendering, and code blocks.
+- A copy button below each AI reply copies its complete Markdown, including code blocks. Stop generation or wait for completion before copying a reply that is still being generated. A brief confirmation appears after copying, and failures show instructions for manual copying.
+- Enter sends a message; Shift + Enter inserts a newline. Chinese input methods are supported.
+- Stop generation, retry failed requests, mobile layouts, and reduced-motion preferences.
+- User messages are saved after sending, and replies are saved when generation finishes or stops. Closing the page during generation may leave an unfinished reply unsaved.
+
+## Data storage
+
+Conversation history is stored in localStorage under `echo-conversations:v2`; the legacy key is `echo-chat:v1`. Records belong to the current browser and site address and do not sync across browsers, devices, domains, or ports. Clearing site data deletes the records, so export important content first. This edition does not support real-time coordination across browser tabs; manage conversations in a single tab.
+
+If existing records cannot be read, the application preserves the original stored data and temporarily continues chatting in memory. Storage quota errors and other write failures also display a warning. In these cases, export any content you need before leaving or refreshing the page.
+
+Each message request sends the active conversation to Gemini as context. Local storage does not mean offline inference. Gemini's free quota, supported regions, and available models depend on the Google account and platform rules. This project is a personal local development example; add authentication and usage limits before making it publicly available to multiple users.
 
 ## Project structure
 
-- `app/api/chat/route.ts`: validate requests, call Gemini, and return streaming responses.
-- `components/`: chat workspace, message list, and composer.
-- `hooks/use-conversation.ts`: chat state and browser persistence.
-- `lib/chat.ts`: model configuration, history validation, and text conversion.
-- `lib/chat-error.ts`: user-facing model error messages.
+- `app/api/chat/route.ts`: Validates requests, calls Gemini, and returns streaming responses.
+- `components/`: Chat workspace, conversation list, message list, and composer.
+- `hooks/use-conversation.ts`: Conversation switching, browser persistence, renaming, deletion, and export.
+- `lib/conversations.ts`: Multi-conversation storage format, legacy history migration, title generation, and Markdown export.
+- `lib/chat.ts`: Model name, message validation, and text conversion.
+- `lib/chat-error.ts`: Chinese messages for model errors.
 
 ## Validation
 
@@ -50,6 +67,4 @@ npm run build
 npm run test:e2e
 ```
 
-If Chromium is missing before the first browser test run, install it with `npx playwright install chromium`. Browser tests simulate model responses and do not consume real API quota.
-
-Gemini's free quota, supported regions, and available models depend on your Google account and the platform's policies. This is a local development demo; add authentication and request limits before public deployment.
+If Chromium is missing when running browser tests for the first time, run `npx playwright install chromium`. Browser tests mock model responses and do not consume actual API quota.
