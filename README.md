@@ -35,6 +35,9 @@ Open http://localhost:3000. The API key is read on the server and is never sent 
 
 ## Chat features
 
+- Edit and resend the latest question or regenerate the latest reply while preserving earlier messages. The editor supports canceling, empty-input validation, and Chinese input methods.
+- Editing and regeneration preserve the original history until the operation finishes. Successful replies and deliberately stopped partial replies are saved; failures restore the original question and reply and allow retrying the same operation. Stopping before any new content arrives, or refreshing during generation, restores the previous history.
+
 - Multi-turn context, streamed replies, Markdown rendering, and code blocks.
 - A copy button below each AI reply copies its complete Markdown, including code blocks. Stop generation or wait for completion before copying a reply that is still being generated. A brief confirmation appears after copying, and failures show instructions for manual copying.
 - Enter sends a message; Shift + Enter inserts a newline. Chinese input methods are supported.

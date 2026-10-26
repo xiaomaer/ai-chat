@@ -1,7 +1,8 @@
 'use client';
 
-import { Check, Copy } from 'lucide-react';
+import { Check, Copy, LoaderCircle } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { MessageAction } from './message-action';
 
 async function copyText(text: string) {
   try {
@@ -46,11 +47,11 @@ export function CopyReply({ text, disabled }: { text: string; disabled: boolean 
 
   return (
     <div className="reply-actions">
-      <button className="copy-reply" type="button" onClick={() => { void copy(); }} disabled={disabled} aria-disabled={disabled || status === 'copying'} aria-label="复制回复" title={disabled ? '回复结束后可复制' : '复制回复（保留 Markdown 格式）'}>
-        {status === 'copied' ? <Check size={13} /> : <Copy size={13} />}
-        {status === 'copied' ? '已复制' : status === 'copying' ? '复制中…' : '复制回复'}
-      </button>
-      <span className={status === 'error' ? 'copy-error' : 'sr-only'} role="status">{status === 'copied' ? '回复已复制到剪贴板。' : status === 'error' ? '复制失败，请选中回复文字手动复制。' : ''}</span>
+      <MessageAction label="复制回复" hint={disabled ? '回复结束后可复制' : status === 'copied' ? '已复制' : status === 'copying' ? '正在复制…' : '复制回复（Markdown）'}
+        className={status === 'copied' ? 'message-action-copied' : ''} disabled={disabled} pending={status === 'copying'} onClick={() => { void copy(); }}>
+        {status === 'copied' ? <Check size={16} aria-hidden="true" /> : status === 'copying' ? <LoaderCircle size={16} className="action-spinner" aria-hidden="true" /> : <Copy size={16} aria-hidden="true" />}
+      </MessageAction>
+      <span className={status === 'error' ? 'copy-error' : 'sr-only'} role="status">{status === 'copied' ? '回复已复制到剪贴板。' : status === 'copying' ? '正在复制回复…' : status === 'error' ? '复制失败，请选中回复文字手动复制。' : ''}</span>
     </div>
   );
 }

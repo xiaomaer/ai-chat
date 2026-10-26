@@ -1,13 +1,21 @@
 'use client';
 
 import type { UIMessage } from 'ai';
+import { RotateCcw } from 'lucide-react';
 import { useEffect, useRef } from 'react';
 import Markdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { messageText } from '@/lib/chat';
 import { CopyReply } from './copy-reply';
+import { EditQuestion } from './edit-question';
+import { MessageAction } from './message-action';
 
-export function MessageList({ messages, busy }: { messages: UIMessage[]; busy: boolean }) {
+export function MessageList({ messages, busy, onEdit, onRegenerate }: {
+  messages: UIMessage[];
+  busy: boolean;
+  onEdit: (text: string) => void;
+  onRegenerate: () => void;
+}) {
   const scrollArea = useRef<HTMLDivElement>(null);
   const followBottom = useRef(true);
   const lastUserId = messages.findLast(message => message.role === 'user')?.id;
@@ -43,7 +51,11 @@ export function MessageList({ messages, busy }: { messages: UIMessage[]; busy: b
                     img: ({ alt }) => <span className="image-placeholder">[图片：{alt || '模型返回的图片'}]</span>,
                   }}>{text}</Markdown></div>
                 )}
-                {message.role === 'assistant' ? <CopyReply text={text} disabled={busy && message.id === lastMessage?.id} /> : null}
+                {message.role === 'user' && message.id === lastUserId ? <EditQuestion text={text} disabled={busy} onSave={onEdit} /> : null}
+                {message.role === 'assistant' ? <div className="assistant-actions">
+                  <CopyReply text={text} disabled={busy && message.id === lastMessage?.id} />
+                  {message.id === lastMessage?.id ? <MessageAction label="重新生成最后一条回复" hint={busy ? '回复结束后可重新生成' : '重新生成回复'} disabled={busy} onClick={onRegenerate}><RotateCcw size={16} aria-hidden="true" /></MessageAction> : null}
+                </div> : null}
               </div>
             </article>
           );

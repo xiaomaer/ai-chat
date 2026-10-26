@@ -16,7 +16,7 @@ const suggestions = [
 ];
 
 export function ChatWorkspace() {
-  const { messages, sendMessage, status, error, clearError, regenerate, stop, busy, hydrated, storageError,
+  const { messages, sendMessage, status, error, clearError, retry, replacementFailed, editLastQuestion, regenerateLastReply, stop, busy, hydrated, storageError,
     active, conversations, newConversation, selectConversation, renameConversation, deleteConversation, exportConversation } = useConversation();
   const [input, setInput] = useState('');
   const mobileHistory = useRef<HTMLDialogElement>(null);
@@ -76,7 +76,7 @@ export function ChatWorkspace() {
           </div>
         </div>
 
-        {messages.length ? <MessageList key={active?.id} messages={messages} busy={busy} /> : (
+        {messages.length ? <MessageList key={active?.id} messages={messages} busy={busy} onEdit={editLastQuestion} onRegenerate={regenerateLastReply} /> : (
           <section className="welcome" aria-labelledby="welcome-title">
             <div className="welcome-inner">
               <div className="welcome-eyebrow"><span />A LITTLE SPACE. A NEW POSSIBILITY.</div>
@@ -94,7 +94,7 @@ export function ChatWorkspace() {
         )}
 
         <div className="composer-area">
-          {error ? <div className="error-notice" role="alert" aria-label="发送失败"><p>{error.message === 'Failed to fetch' ? '网络连接中断，请检查网络后重试。' : error.message}</p><button type="button" onClick={() => { clearError(); void regenerate(); }} disabled={busy}><RotateCcw size={14} />重新尝试</button></div> : null}
+          {error ? <div className="error-notice" role="alert" aria-label="发送失败"><p>{error.message === 'Failed to fetch' ? '网络连接中断，请检查网络后重试。' : error.message}{replacementFailed ? ' 原问题和回复已恢复，可重新尝试本次操作。' : ''}</p><button type="button" onClick={retry} disabled={busy}><RotateCcw size={14} />重新尝试</button></div> : null}
           {storageError ? <p className="storage-warning" role="status">{storageError}</p> : null}
           {busy ? <div className="generation-status" role="status">{status === 'submitted' ? '正在等待回复…' : '回声正在回复…'}</div> : null}
           <ChatComposer input={input} onChange={setInput} onSend={() => send(input)} onStop={() => { void stop(); }} busy={busy} disabled={!hydrated} />
